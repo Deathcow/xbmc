@@ -10,6 +10,7 @@
 
 #include "DRMPRIMEEGL.h"
 #include "cores/VideoPlayer/VideoRenderers/BaseRenderer.h"
+#include "rendering/gles/RenderSystemGLES.h"
 
 #include <memory>
 
@@ -56,7 +57,6 @@ public:
 
 private:
   void DrawBlackBars();
-  void Render(unsigned int flags, int index);
 
   bool m_configured = false;
   float m_clearColour{0.0f};

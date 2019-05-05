@@ -262,43 +262,27 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
     }
   }
 
+  float shaderAlpha = 1.0f;
+
   if (alpha < 255)
   {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    shaderAlpha = alpha / 255.0f;
   }
   else
   {
     glDisable(GL_BLEND);
+    shaderAlpha = 1.0f;
   }
 
-  Render(flags, index);
-
-  VerifyGLState();
-  glEnable(GL_BLEND);
-}
-
-bool CRendererDRMPRIMEGLES::RenderCapture(CRenderCapture* capture)
-{
-  capture->BeginRender();
-  capture->EndRender();
-  return true;
-}
-
-bool CRendererDRMPRIMEGLES::ConfigChanged(const VideoPicture& picture)
-{
-  if (picture.videoBuffer->GetFormat() != m_format)
-    return true;
-
-  return false;
-}
-
-void CRendererDRMPRIMEGLES::Render(unsigned int flags, int index)
-{
   BUFFER& buf = m_buffers[index];
 
   CVideoBufferDRMPRIME* buffer = dynamic_cast<CVideoBufferDRMPRIME*>(buf.videoBuffer);
   if (!buffer || !buffer->IsValid())
+    return;
+
+  if (!buf.texture.Map(buffer))
     return;
 
   CRenderSystemGLES* renderSystem =
@@ -306,14 +290,37 @@ void CRendererDRMPRIMEGLES::Render(unsigned int flags, int index)
   if (!renderSystem)
     return;
 
-  if (!buf.texture.Map(buffer))
-    return;
+  renderSystem->EnableGUIShader(SM_TEXTURE_YUV2RGB);
 
-  glBindTexture(GL_TEXTURE_EXTERNAL_OES, buf.texture.GetTexture());
+  if (buf.texture.GetTextureY() != 0)
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureY());
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Y={}", __FUNCTION__,
+              buf.texture.GetTextureY());
+  }
 
-  renderSystem->EnableGUIShader(SM_TEXTURE_RGBA_OES);
+  if (buf.texture.GetTextureU() != 0)
+  {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureU());
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - U={}", __FUNCTION__,
+              buf.texture.GetTextureU());
+    renderSystem->GUIShaderSetLayers(2);
+  }
 
-  GLubyte idx[4] = {0, 1, 3, 2}; // Determines order of triangle strip
+  if (buf.texture.GetTextureV() != 0)
+  {
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureV());
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - V={}", __FUNCTION__,
+              buf.texture.GetTextureV());
+    renderSystem->GUIShaderSetLayers(3);
+  }
+
+  renderSystem->GUIShaderSetAlpha(shaderAlpha);
+
+  GLubyte idx[4] = {0, 1, 3, 2};
   GLuint vertexVBO;
   GLuint indexVBO;
   struct PackedVertex
@@ -384,9 +391,25 @@ void CRendererDRMPRIMEGLES::Render(unsigned int flags, int index)
 
   renderSystem->DisableGUIShader();
 
-  glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
-
   buf.fence->CreateFence();
+
+  VerifyGLState();
+  glEnable(GL_BLEND);
+}
+
+bool CRendererDRMPRIMEGLES::RenderCapture(CRenderCapture* capture)
+{
+  capture->BeginRender();
+  capture->EndRender();
+  return true;
+}
+
+bool CRendererDRMPRIMEGLES::ConfigChanged(const VideoPicture& picture)
+{
+  if (picture.videoBuffer->GetFormat() != m_format)
+    return true;
+
+  return false;
 }
 
 bool CRendererDRMPRIMEGLES::Supports(ERENDERFEATURE feature)
