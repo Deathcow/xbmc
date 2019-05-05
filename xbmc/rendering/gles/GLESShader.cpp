@@ -43,12 +43,15 @@ void CGLESShader::OnCompiledAndLinked()
   // Variables passed directly to the Fragment shader
   m_hTex0   = glGetUniformLocation(ProgramHandle(), "m_samp0");
   m_hTex1   = glGetUniformLocation(ProgramHandle(), "m_samp1");
+  m_hTex2   = glGetUniformLocation(ProgramHandle(), "m_samp2");
   m_hUniCol = glGetUniformLocation(ProgramHandle(), "m_unicol");
   m_hField  = glGetUniformLocation(ProgramHandle(), "m_field");
   m_hStep   = glGetUniformLocation(ProgramHandle(), "m_step");
   m_hContrast   = glGetUniformLocation(ProgramHandle(), "m_contrast");
   m_hBrightness = glGetUniformLocation(ProgramHandle(), "m_brightness");
   m_halpha = glGetUniformLocation(ProgramHandle(), "m_alpha");
+
+  m_hLayers = glGetUniformLocation(ProgramHandle(), "m_layers");
 
   // Variables passed directly to the Vertex shader
   m_hProj  = glGetUniformLocation(ProgramHandle(), "m_proj");
@@ -65,6 +68,7 @@ void CGLESShader::OnCompiledAndLinked()
   glUseProgram( ProgramHandle() );
   glUniform1i(m_hTex0, 0);
   glUniform1i(m_hTex1, 1);
+  glUniform1i(m_hTex2, 2);
   glUniform4f(m_hUniCol, 1.0, 1.0, 1.0, 1.0);
 
   const float identity[16] = {
@@ -180,4 +184,9 @@ void CGLESShader::Free()
 void CGLESShader::SetAlpha(float alpha)
 {
   glUniform1f(m_halpha, alpha);
+}
+
+void CGLESShader::SetLayers(int layers)
+{
+  glUniform1i(m_hLayers, layers);
 }
