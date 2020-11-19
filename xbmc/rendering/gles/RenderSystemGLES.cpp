@@ -638,6 +638,12 @@ GLint CRenderSystemGLES::GUIShaderGetBrightness()
   return -1;
 }
 
+void CRenderSystemGLES::GUIShaderSetAlpha(float alpha)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetAlpha(alpha);
+}
+
 bool CRenderSystemGLES::SupportsStereo(RENDER_STEREO_MODE mode) const
 {
   return CRenderSystemBase::SupportsStereo(mode);
