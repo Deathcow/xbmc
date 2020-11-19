@@ -33,8 +33,11 @@ void CVideoLayerBridgeDRMPRIME::Disable()
 {
   // disable video plane
   auto plane = m_DRM->GetVideoPlane();
-  m_DRM->AddProperty(plane, "FB_ID", 0);
-  m_DRM->AddProperty(plane, "CRTC_ID", 0);
+  if (plane)
+  {
+    m_DRM->AddProperty(plane, "FB_ID", 0);
+    m_DRM->AddProperty(plane, "CRTC_ID", 0);
+  }
 
   auto connector = m_DRM->GetConnector();
 
@@ -200,6 +203,8 @@ void CVideoLayerBridgeDRMPRIME::Configure(CVideoBufferDRMPRIME* buffer)
   const VideoPicture& picture = buffer->GetPicture();
 
   auto plane = m_DRM->GetVideoPlane();
+  if (!plane)
+    plane = m_DRM->GetGuiPlane();
 
   bool result;
   uint64_t value;
