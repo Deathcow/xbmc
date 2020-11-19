@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "DRMPRIMEEGL.h"
 #include "cores/VideoPlayer/VideoRenderers/BaseRenderer.h"
 #include "rendering/gles/RenderSystemGLES.h"
 
@@ -30,6 +29,7 @@ class CEGLFence;
 } // namespace UTILS
 } // namespace KODI
 
+class CDRMPRIMETexture;
 class CVideoLayerBridgeDRMPRIME;
 
 class CRendererDRMPRIMEGLES : public CBaseRenderer
@@ -74,7 +74,7 @@ private:
   {
     CVideoBuffer* videoBuffer = nullptr;
     std::unique_ptr<KODI::UTILS::EGL::CEGLFence> fence;
-    CDRMPRIMETexture texture;
+    std::unique_ptr<CDRMPRIMETexture> texture;
 
     AVColorPrimaries m_srcPrimaries;
     AVColorSpace m_srcColSpace;
