@@ -30,6 +30,8 @@ class CEGLFence;
 } // namespace UTILS
 } // namespace KODI
 
+class CVideoLayerBridgeDRMPRIME;
+
 class CRendererDRMPRIMEGLES : public CBaseRenderer
 {
 public:
@@ -65,6 +67,8 @@ private:
 
   bool m_configured = false;
   float m_clearColour{0.0f};
+
+  std::shared_ptr<CVideoLayerBridgeDRMPRIME> m_videoLayerBridge;
 
   struct BUFFER
   {
