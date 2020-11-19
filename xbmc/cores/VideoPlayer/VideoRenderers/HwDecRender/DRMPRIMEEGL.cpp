@@ -48,16 +48,16 @@ int GetEGLColorRange(const VideoPicture& picture)
 
 } // namespace
 
+CDRMPRIMETexture::CDRMPRIMETexture(EGLDisplay eglDisplay)
+{
+  for (auto& eglImage : m_eglImage)
+    eglImage = std::make_unique<CEGLImage>(eglDisplay);
+}
+
 CDRMPRIMETexture::~CDRMPRIMETexture()
 {
   for (auto texture : m_texture)
     glDeleteTextures(1, &texture);
-}
-
-void CDRMPRIMETexture::Init(EGLDisplay eglDisplay)
-{
-  for (auto& eglImage : m_eglImage)
-    eglImage.reset(new CEGLImage(eglDisplay));
 }
 
 bool CDRMPRIMETexture::Map(CVideoBufferDRMPRIME* buffer)

@@ -10,6 +10,7 @@
 
 #include "ServiceBroker.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
+#include "cores/VideoPlayer/VideoRenderers/HwDecRender/DRMPRIMEEGL.h"
 #include "cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
@@ -121,7 +122,7 @@ bool CRendererDRMPRIMEGLES::Configure(const VideoPicture& picture,
   {
     if (!buf.fence)
     {
-      buf.texture.Init(eglDisplay);
+      buf.texture = std::make_unique<CDRMPRIMETexture>(eglDisplay);
       buf.fence.reset(new CEGLFence(eglDisplay));
     }
   }
@@ -155,7 +156,7 @@ void CRendererDRMPRIMEGLES::AddVideoPicture(const VideoPicture& picture, int ind
     CLog::LogF(LOGERROR, "unreleased video buffer");
     if (buf.fence)
       buf.fence->DestroyFence();
-    buf.texture.Unmap();
+    buf.texture->Unmap();
     buf.videoBuffer->Release();
   }
   buf.videoBuffer = picture.videoBuffer;
@@ -200,7 +201,8 @@ void CRendererDRMPRIMEGLES::ReleaseBuffer(int index)
   if (buf.fence)
     buf.fence->DestroyFence();
 
-  buf.texture.Unmap();
+  if (buf.texture)
+    buf.texture->Unmap();
 
   if (buf.videoBuffer)
   {
@@ -331,7 +333,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   if (!buffer || !buffer->IsValid())
     return;
 
-  if (!buf.texture.Map(buffer))
+  if (!buf.texture->Map(buffer))
     return;
 
   CRenderSystemGLES* renderSystem =
@@ -341,29 +343,29 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
   renderSystem->EnableGUIShader(SM_TEXTURE_YUV2RGB);
 
-  if (buf.texture.GetTextureY() != 0)
+  if (buf.texture->GetTextureY() != 0)
   {
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureY());
+    glBindTexture(buf.texture->GetTextureTarget(), buf.texture->GetTextureY());
     CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Y={}", __FUNCTION__,
-              buf.texture.GetTextureY());
+              buf.texture->GetTextureY());
   }
 
-  if (buf.texture.GetTextureU() != 0)
+  if (buf.texture->GetTextureU() != 0)
   {
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureU());
+    glBindTexture(buf.texture->GetTextureTarget(), buf.texture->GetTextureU());
     CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - U={}", __FUNCTION__,
-              buf.texture.GetTextureU());
+              buf.texture->GetTextureU());
     renderSystem->GUIShaderSetLayers(2);
   }
 
-  if (buf.texture.GetTextureV() != 0)
+  if (buf.texture->GetTextureV() != 0)
   {
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(buf.texture.GetTextureTarget(), buf.texture.GetTextureV());
+    glBindTexture(buf.texture->GetTextureTarget(), buf.texture->GetTextureV());
     CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - V={}", __FUNCTION__,
-              buf.texture.GetTextureV());
+              buf.texture->GetTextureV());
     renderSystem->GUIShaderSetLayers(3);
   }
 
@@ -389,7 +391,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source limited: {}", __FUNCTION__,
             !buf.m_srcFullRange);
   CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - texture bits: {}", __FUNCTION__,
-            buf.texture.GetTextureBits());
+            buf.texture->GetTextureBits());
 
   std::string yuvStr;
   for (int i = 0; i < 4; i++)
