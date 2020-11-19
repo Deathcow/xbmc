@@ -10,6 +10,7 @@
 
 #include "ServiceBroker.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
+#include "cores/VideoPlayer/VideoRenderers/HwDecRender/VideoLayerBridgeDRMPRIME.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
@@ -21,6 +22,8 @@
 #include "utils/log.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
+#include "windowing/gbm/WinSystemGbm.h"
+#include "windowing/gbm/drm/DRMAtomic.h"
 #include "windowing/linux/WinSystemEGL.h"
 
 extern "C"
@@ -33,6 +36,9 @@ using namespace KODI::UTILS::EGL;
 CRendererDRMPRIMEGLES::~CRendererDRMPRIMEGLES()
 {
   Flush(false);
+
+  if (m_videoLayerBridge)
+    m_videoLayerBridge->Disable();
 }
 
 CBaseRenderer* CRendererDRMPRIMEGLES::Create(CVideoBuffer* buffer)
@@ -121,6 +127,21 @@ bool CRendererDRMPRIMEGLES::Configure(const VideoPicture& picture,
   }
 
   m_clearColour = winSystem->UseLimitedColor() ? (16.0f / 0xff) : 0.0f;
+
+  if (!m_videoLayerBridge)
+  {
+    auto winSystem =
+        dynamic_cast<KODI::WINDOWING::GBM::CWinSystemGbm*>(CServiceBroker::GetWinSystem());
+    if (winSystem)
+    {
+      m_videoLayerBridge = std::make_shared<CVideoLayerBridgeDRMPRIME>(
+          std::dynamic_pointer_cast<KODI::WINDOWING::GBM::CDRMAtomic>(winSystem->GetDrm()));
+
+      auto buffer = dynamic_cast<CVideoBufferDRMPRIME*>(picture.videoBuffer);
+      if (buffer && buffer->IsValid())
+        m_videoLayerBridge->Configure(buffer);
+    }
+  }
 
   m_configured = true;
   return true;
