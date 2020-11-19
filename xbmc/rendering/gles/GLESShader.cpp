@@ -48,6 +48,7 @@ void CGLESShader::OnCompiledAndLinked()
   m_hStep   = glGetUniformLocation(ProgramHandle(), "m_step");
   m_hContrast   = glGetUniformLocation(ProgramHandle(), "m_contrast");
   m_hBrightness = glGetUniformLocation(ProgramHandle(), "m_brightness");
+  m_halpha = glGetUniformLocation(ProgramHandle(), "m_alpha");
 
   // Variables passed directly to the Vertex shader
   m_hProj  = glGetUniformLocation(ProgramHandle(), "m_proj");
@@ -176,3 +177,7 @@ void CGLESShader::Free()
   CGLSLShaderProgram::Free();
 }
 
+void CGLESShader::SetAlpha(float alpha)
+{
+  glUniform1f(m_halpha, alpha);
+}

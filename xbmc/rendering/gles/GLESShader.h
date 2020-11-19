@@ -38,6 +38,8 @@ public:
   GLfloat GetClipYFactor() { return m_clipYFactor; }
   GLfloat GetClipYOffset() { return m_clipYOffset; }
 
+  void SetAlpha(float alpha);
+
 protected:
   GLint m_hTex0 = 0;
   GLint m_hTex1 = 0;
@@ -53,6 +55,7 @@ protected:
   GLint m_hStep = 0;
   GLint m_hContrast = 0;
   GLint m_hBrightness = 0;
+  GLint m_halpha = 0;
 
   const GLfloat *m_proj;
   const GLfloat *m_model;
