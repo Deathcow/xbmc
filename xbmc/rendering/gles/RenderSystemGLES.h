@@ -93,6 +93,13 @@ public:
 
   void GUIShaderSetLayers(int layers);
 
+  void GUIShaderSetYUVMatrix(float (&yuv)[4][4]);
+
+  void GUIShaderSetEnableColorConversion(bool enable);
+  void GUIShaderSetPrimaryMatrix(float (&mat)[3][3]);
+  void GUIShaderSetGammaSrc(float gamma);
+  void GUIShaderSetGammaDstInv(float gamma);
+
 protected:
   virtual void SetVSyncImpl(bool enable) = 0;
   virtual void PresentRenderImpl(bool rendered) = 0;
