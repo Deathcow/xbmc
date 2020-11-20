@@ -31,10 +31,12 @@ uniform float m_alpha;
 
 uniform int m_layers;
 
-mat4 csc = mat4(1.0,  0.0,    1.402, -0.701,
-                1.0, -0.344, -0.714,  0.529,
-                1.0,  1.772,  0.0,   -0.886,
-                0.0,  0.0,    0.0,    0.0);
+uniform mat4 m_yuvmat;
+
+uniform int m_enableColorConversion;
+uniform mat3 m_primMat;
+uniform float m_gammaSrc;
+uniform float m_gammaDstInv;
 
 void main ()
 {
@@ -54,8 +56,15 @@ void main ()
                1.0);
   }
 
-  vec4 rgb = yuv * csc;
+  vec4 rgb = m_yuvmat * yuv;
   rgb.a = m_alpha;
+
+  if (m_enableColorConversion != 0)
+  {
+    rgb.rgb = pow(max(vec3(0), rgb.rgb), vec3(m_gammaSrc));
+    rgb.rgb = max(vec3(0), m_primMat * rgb.rgb);
+    rgb.rgb = pow(rgb.rgb, vec3(m_gammaDstInv));
+  }
 
   gl_FragColor = rgb;
 }

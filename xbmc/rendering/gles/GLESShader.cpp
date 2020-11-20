@@ -53,6 +53,13 @@ void CGLESShader::OnCompiledAndLinked()
 
   m_hLayers = glGetUniformLocation(ProgramHandle(), "m_layers");
 
+  m_hyuvMatrix = glGetUniformLocation(ProgramHandle(), "m_yuvmat");
+
+  m_henableColorConversion = glGetUniformLocation(ProgramHandle(), "m_enableColorConversion");
+  m_hprimaryMatrix = glGetUniformLocation(ProgramHandle(), "m_primMat");
+  m_hgammaSrc = glGetUniformLocation(ProgramHandle(), "m_gammaSrc");
+  m_hgammaDstInv = glGetUniformLocation(ProgramHandle(), "m_gammaDstInv");
+
   // Variables passed directly to the Vertex shader
   m_hProj  = glGetUniformLocation(ProgramHandle(), "m_proj");
   m_hModel = glGetUniformLocation(ProgramHandle(), "m_model");
@@ -189,4 +196,29 @@ void CGLESShader::SetAlpha(float alpha)
 void CGLESShader::SetLayers(int layers)
 {
   glUniform1i(m_hLayers, layers);
+}
+
+void CGLESShader::SetYUVMatrix(float (&yuv)[4][4])
+{
+  glUniformMatrix4fv(m_hyuvMatrix, 1, GL_FALSE, reinterpret_cast<GLfloat*>(yuv));
+}
+
+void CGLESShader::SetEnableColorConversion(bool enable)
+{
+  glUniform1i(m_henableColorConversion, static_cast<int>(enable));
+}
+
+void CGLESShader::SetPrimaryMatrix(float (&mat)[3][3])
+{
+  glUniformMatrix3fv(m_hprimaryMatrix, 1, GL_FALSE, reinterpret_cast<GLfloat*>(mat));
+}
+
+void CGLESShader::SetGammaSrc(float gamma)
+{
+  glUniform1f(m_hgammaSrc, gamma);
+}
+
+void CGLESShader::SetGammaDstInv(float gamma)
+{
+  glUniform1f(m_hgammaDstInv, gamma);
 }
