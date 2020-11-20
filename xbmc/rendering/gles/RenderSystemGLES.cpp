@@ -661,6 +661,36 @@ void CRenderSystemGLES::GUIShaderSetLayers(int layers)
     m_pShader[m_method]->SetLayers(layers);
 }
 
+void CRenderSystemGLES::GUIShaderSetYUVMatrix(float (&yuv)[4][4])
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetYUVMatrix(yuv);
+}
+
+void CRenderSystemGLES::GUIShaderSetEnableColorConversion(bool enable)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetEnableColorConversion(enable);
+}
+
+void CRenderSystemGLES::GUIShaderSetPrimaryMatrix(float (&mat)[3][3])
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetPrimaryMatrix(mat);
+}
+
+void CRenderSystemGLES::GUIShaderSetGammaSrc(float gamma)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetGammaSrc(gamma);
+}
+
+void CRenderSystemGLES::GUIShaderSetGammaDstInv(float gamma)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetGammaDstInv(gamma);
+}
+
 bool CRenderSystemGLES::SupportsStereo(RENDER_STEREO_MODE mode) const
 {
   return CRenderSystemBase::SupportsStereo(mode);

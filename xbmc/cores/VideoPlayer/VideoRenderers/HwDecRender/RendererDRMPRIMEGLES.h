@@ -66,5 +66,11 @@ private:
     CVideoBuffer* videoBuffer = nullptr;
     std::unique_ptr<KODI::UTILS::EGL::CEGLFence> fence;
     CDRMPRIMETexture texture;
+
+    AVColorPrimaries m_srcPrimaries;
+    AVColorSpace m_srcColSpace;
+
+    bool m_srcFullRange;
+    int m_srcBits;
   } m_buffers[NUM_BUFFERS];
 };
