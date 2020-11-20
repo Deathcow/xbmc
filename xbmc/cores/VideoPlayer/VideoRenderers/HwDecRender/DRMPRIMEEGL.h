@@ -26,6 +26,8 @@ public:
   void Unmap();
   void Init(EGLDisplay eglDisplay);
 
+  int GetTextureBits() const { return m_textureBits; }
+
   GLenum GetTextureTarget() const { return m_textureTarget; }
 
   GLuint GetTextureY() { return m_texture[0]; }
@@ -42,4 +44,6 @@ protected:
   std::array<GLuint, 3> m_texture{0};
   int m_texWidth{0};
   int m_texHeight{0};
+
+  int m_textureBits{8};
 };

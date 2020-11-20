@@ -13,6 +13,7 @@
 #include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
+#include "cores/VideoPlayer/VideoRenderers/VideoShaders/ConversionMatrix.h"
 #include "rendering/gles/RenderSystemGLES.h"
 #include "utils/EGLFence.h"
 #include "utils/EGLImage.h"
@@ -21,6 +22,11 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 #include "windowing/linux/WinSystemEGL.h"
+
+extern "C"
+{
+#include "libavutil/pixfmt.h"
+}
 
 using namespace KODI::UTILS::EGL;
 
@@ -133,6 +139,20 @@ void CRendererDRMPRIMEGLES::AddVideoPicture(const VideoPicture& picture, int ind
   }
   buf.videoBuffer = picture.videoBuffer;
   buf.videoBuffer->Acquire();
+
+  buf.m_srcPrimaries = static_cast<AVColorPrimaries>(picture.color_primaries);
+  buf.m_srcColSpace = static_cast<AVColorSpace>(picture.color_space);
+
+  if (buf.m_srcColSpace == AVCOL_SPC_UNSPECIFIED)
+  {
+    if (picture.iWidth > 1024 || picture.iHeight >= 600)
+      buf.m_srcColSpace = AVCOL_SPC_BT709;
+    else
+      buf.m_srcColSpace = AVCOL_SPC_BT470BG;
+  }
+
+  buf.m_srcFullRange = picture.color_range == 1;
+  buf.m_srcBits = picture.colorBits;
 }
 
 bool CRendererDRMPRIMEGLES::Flush(bool saveBuffers)
@@ -319,6 +339,63 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   }
 
   renderSystem->GUIShaderSetAlpha(shaderAlpha);
+
+  CConvertMatrix matrix;
+  matrix.SetColPrimaries(AVCOL_PRI_BT709, buf.m_srcPrimaries);
+  matrix.SetColParams(buf.m_srcColSpace, buf.m_srcBits, !buf.m_srcFullRange,
+                      buf.texture.GetTextureBits());
+  matrix.SetParams(1.0f, 0.0f, CServiceBroker::GetWinSystem()->UseLimitedColor());
+
+  float yuv[4][4];
+  matrix.GetYuvMat(yuv);
+
+  CLog::Log(LOGDEBUG, LOGVIDEO,
+            "CRendererDRMPRIMEGLES::{} - source primary: {} destination primary: {}", __FUNCTION__,
+            buf.m_srcPrimaries, AVCOL_PRI_BT709);
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source colorspace: {}", __FUNCTION__,
+            buf.m_srcColSpace);
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source bits: {}", __FUNCTION__,
+            buf.m_srcBits);
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source limited: {}", __FUNCTION__,
+            !buf.m_srcFullRange);
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - texture bits: {}", __FUNCTION__,
+            buf.texture.GetTextureBits());
+
+  std::string yuvStr;
+  for (int i = 0; i < 4; i++)
+    yuvStr.append(
+        StringUtils::Format("\n[%f][%f][%f][%f]", yuv[i][0], yuv[i][1], yuv[i][2], yuv[i][3]));
+
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - YUV matrix: {}", __FUNCTION__, yuvStr);
+
+  renderSystem->GUIShaderSetYUVMatrix(yuv);
+  renderSystem->GUIShaderSetEnableColorConversion(false);
+
+  //! @todo: depend on output colorspace
+  if (buf.m_srcPrimaries != AVCOL_PRI_BT709)
+  {
+    float primMat[3][3];
+    matrix.GetPrimMat(primMat);
+
+    renderSystem->GUIShaderSetEnableColorConversion(true);
+    renderSystem->GUIShaderSetPrimaryMatrix(primMat);
+    renderSystem->GUIShaderSetGammaSrc(matrix.GetGammaSrc());
+    renderSystem->GUIShaderSetGammaDstInv(1 / matrix.GetGammaDst());
+
+    std::string primaryStr;
+    for (int i = 0; i < 3; i++)
+      primaryStr.append(
+          StringUtils::Format("\n[%f][%f][%f]", primMat[i][0], primMat[i][1], primMat[i][2]));
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Primary matrix: {}", __FUNCTION__,
+              primaryStr);
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - gamma src: {}", __FUNCTION__,
+              matrix.GetGammaSrc());
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - gamma dst inv: {}", __FUNCTION__,
+              1 / matrix.GetGammaDst());
+  }
 
   GLubyte idx[4] = {0, 1, 3, 2};
   GLuint vertexVBO;
