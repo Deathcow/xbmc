@@ -153,6 +153,14 @@ void CRendererDRMPRIMEGLES::AddVideoPicture(const VideoPicture& picture, int ind
 
   buf.m_srcFullRange = picture.color_range == 1;
   buf.m_srcBits = picture.colorBits;
+
+  buf.m_hasDisplayMetadata = picture.hasDisplayMetadata;
+  buf.m_displayMetadata = picture.displayMetadata;
+  buf.m_lightMetadata = picture.lightMetadata;
+  if (picture.hasLightMetadata && picture.lightMetadata.MaxCLL)
+  {
+    buf.m_hasLightMetadata = picture.hasLightMetadata;
+  }
 }
 
 bool CRendererDRMPRIMEGLES::Flush(bool saveBuffers)
@@ -397,6 +405,44 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
               1 / matrix.GetGammaDst());
   }
 
+  renderSystem->GUIShaderSetToneMappingMethod(VS_TONEMAPMETHOD_OFF);
+  if (m_videoSettings.m_ToneMapMethod != 0 &&
+      (buf.m_hasLightMetadata || (buf.m_hasDisplayMetadata && buf.m_displayMetadata.has_luminance)))
+  {
+    float param = 0.7;
+
+    if (buf.m_hasLightMetadata)
+    {
+      param = log10(100) / log10(buf.m_lightMetadata.MaxCLL);
+    }
+    else if (buf.m_hasDisplayMetadata && buf.m_displayMetadata.has_luminance)
+    {
+      param = log10(100) / log10(buf.m_displayMetadata.max_luminance.num /
+                                 buf.m_displayMetadata.max_luminance.den);
+    }
+
+    // Sanity check
+    if (param < 0.1f || param > 5.0f)
+    {
+      param = 0.7f;
+    }
+
+    param *= m_videoSettings.m_ToneMapParam;
+
+    float coefs[3];
+    matrix.GetRGBYuvCoefs(buf.m_srcColSpace, coefs);
+    renderSystem->GUIShaderSetRGBYUVCoefficients(coefs);
+    renderSystem->GUIShaderSetToneMappingMethod(m_videoSettings.m_ToneMapMethod);
+    renderSystem->GUIShaderSetToneMapParameter(param);
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Tonemap coefficients: [{}][{}][{}]",
+              __FUNCTION__, coefs[0], coefs[1], coefs[2]);
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Tonemap method: {}", __FUNCTION__,
+              m_videoSettings.m_ToneMapMethod);
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - Tonemap parameter: {}", __FUNCTION__,
+              param);
+  }
+
   GLubyte idx[4] = {0, 1, 3, 2};
   GLuint vertexVBO;
   GLuint indexVBO;
@@ -498,6 +544,7 @@ bool CRendererDRMPRIMEGLES::Supports(ERENDERFEATURE feature)
     case RENDERFEATURE_VERTICAL_SHIFT:
     case RENDERFEATURE_PIXEL_RATIO:
     case RENDERFEATURE_ROTATION:
+    case RENDERFEATURE_TONEMAP:
       return true;
     default:
       return false;
