@@ -691,6 +691,24 @@ void CRenderSystemGLES::GUIShaderSetGammaDstInv(float gamma)
     m_pShader[m_method]->SetGammaDstInv(gamma);
 }
 
+void CRenderSystemGLES::GUIShaderSetToneMappingMethod(int method)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetToneMappingMethod(method);
+}
+
+void CRenderSystemGLES::GUIShaderSetRGBYUVCoefficients(float (&coefs)[3])
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetRGBYUVCoefficients(coefs);
+}
+
+void CRenderSystemGLES::GUIShaderSetToneMapParameter(float parameter)
+{
+  if (m_pShader[m_method])
+    m_pShader[m_method]->SetToneMapParameter(parameter);
+}
+
 bool CRenderSystemGLES::SupportsStereo(RENDER_STEREO_MODE mode) const
 {
   return CRenderSystemBase::SupportsStereo(mode);
