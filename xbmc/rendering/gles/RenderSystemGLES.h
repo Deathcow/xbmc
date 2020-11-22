@@ -100,6 +100,10 @@ public:
   void GUIShaderSetGammaSrc(float gamma);
   void GUIShaderSetGammaDstInv(float gamma);
 
+  void GUIShaderSetToneMappingMethod(int method);
+  void GUIShaderSetRGBYUVCoefficients(float (&coefs)[3]);
+  void GUIShaderSetToneMapParameter(float parameter);
+
 protected:
   virtual void SetVSyncImpl(bool enable) = 0;
   virtual void PresentRenderImpl(bool rendered) = 0;
