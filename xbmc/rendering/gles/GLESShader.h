@@ -49,6 +49,10 @@ public:
   void SetGammaSrc(float gamma);
   void SetGammaDstInv(float gamma);
 
+  void SetToneMappingMethod(int method);
+  void SetRGBYUVCoefficients(float (&coefs)[3]);
+  void SetToneMapParameter(float parameter);
+
 protected:
   GLint m_hTex0 = 0;
   GLint m_hTex1 = 0;
@@ -76,6 +80,10 @@ protected:
   GLint m_hprimaryMatrix = 0;
   GLint m_hgammaSrc = 0;
   GLint m_hgammaDstInv = 0;
+
+  GLint m_htoneMapMethod = 0;
+  GLint m_hcoefs = 0;
+  GLint m_htoneP1 = 0;
 
   const GLfloat *m_proj;
   const GLfloat *m_model;

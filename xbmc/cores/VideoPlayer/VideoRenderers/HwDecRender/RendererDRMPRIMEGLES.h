@@ -14,6 +14,11 @@
 
 #include <memory>
 
+extern "C"
+{
+#include <libavutil/mastering_display_metadata.h>
+}
+
 namespace KODI
 {
 namespace UTILS
@@ -69,6 +74,11 @@ private:
 
     AVColorPrimaries m_srcPrimaries;
     AVColorSpace m_srcColSpace;
+
+    bool m_hasDisplayMetadata{false};
+    AVMasteringDisplayMetadata m_displayMetadata;
+    bool m_hasLightMetadata{false};
+    AVContentLightMetadata m_lightMetadata;
 
     bool m_srcFullRange;
     int m_srcBits;

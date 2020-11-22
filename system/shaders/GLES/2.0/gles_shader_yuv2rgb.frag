@@ -38,6 +38,15 @@ uniform mat3 m_primMat;
 uniform float m_gammaSrc;
 uniform float m_gammaDstInv;
 
+uniform int m_toneMapMethod;
+uniform float m_toneP1;
+uniform vec3 m_coefsDst;
+
+float tonemap(float val)
+{
+  return val * (1.0 + val / (m_toneP1 * m_toneP1)) / (1.0 + val);
+}
+
 void main ()
 {
   vec4 yuv;
@@ -64,6 +73,12 @@ void main ()
     rgb.rgb = pow(max(vec3(0), rgb.rgb), vec3(m_gammaSrc));
     rgb.rgb = max(vec3(0), m_primMat * rgb.rgb);
     rgb.rgb = pow(rgb.rgb, vec3(m_gammaDstInv));
+  }
+
+  if (m_toneMapMethod != 0)
+  {
+    float luma = dot(rgb.rgb, m_coefsDst);
+    rgb.rgb *= tonemap(luma) / luma;
   }
 
   gl_FragColor = rgb;

@@ -60,6 +60,12 @@ void CGLESShader::OnCompiledAndLinked()
   m_hgammaSrc = glGetUniformLocation(ProgramHandle(), "m_gammaSrc");
   m_hgammaDstInv = glGetUniformLocation(ProgramHandle(), "m_gammaDstInv");
 
+  m_henableColorConversion = glGetUniformLocation(ProgramHandle(), "m_enableColorConversion");
+
+  m_htoneMapMethod = glGetUniformLocation(ProgramHandle(), "m_toneMapMethod");
+  m_hcoefs = glGetUniformLocation(ProgramHandle(), "m_coefsDst");
+  m_htoneP1 = glGetUniformLocation(ProgramHandle(), "m_toneP1");
+
   // Variables passed directly to the Vertex shader
   m_hProj  = glGetUniformLocation(ProgramHandle(), "m_proj");
   m_hModel = glGetUniformLocation(ProgramHandle(), "m_model");
@@ -221,4 +227,19 @@ void CGLESShader::SetGammaSrc(float gamma)
 void CGLESShader::SetGammaDstInv(float gamma)
 {
   glUniform1f(m_hgammaDstInv, gamma);
+}
+
+void CGLESShader::SetToneMappingMethod(int method)
+{
+  glUniform1i(m_htoneMapMethod, method);
+}
+
+void CGLESShader::SetRGBYUVCoefficients(float (&coefs)[3])
+{
+  glUniform3f(m_hcoefs, coefs[0], coefs[1], coefs[2]);
+}
+
+void CGLESShader::SetToneMapParameter(float parameter)
+{
+  glUniform1f(m_htoneP1, parameter);
 }
