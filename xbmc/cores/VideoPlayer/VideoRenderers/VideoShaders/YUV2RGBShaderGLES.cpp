@@ -59,6 +59,8 @@ BaseYUV2RGBGLSLShader::BaseYUV2RGBGLSLShader(EShaderFormat format, AVColorPrimar
 
   CLog::Log(LOGDEBUG, "GLES: BaseYUV2RGBGLSLShader: defines:\n{}", m_defines);
 
+  m_colorConversion = srcPrimaries != dstPrimaries;
+
   m_convMatrix.SetSourceColorPrimaries(srcPrimaries).SetDestinationColorPrimaries(dstPrimaries);
 }
 
@@ -97,23 +99,20 @@ bool BaseYUV2RGBGLSLShader::OnEnabled()
   glUniform1i(m_hVTex, 2);
   glUniform2f(m_hStep, 1.0 / m_width, 1.0 / m_height);
 
-  GLfloat yuvMat[4][4];
-  // keep video levels
-
   m_convMatrix.SetDestinationContrast(m_contrast)
       .SetDestinationBlack(m_black)
       .SetDestinationLimitedRange(!m_convertFullRange);
 
-  m_convMatrix.GetYuvMat(yuvMat);
-  glUniformMatrix4fv(m_hYuvMat, 1, GL_FALSE, (GLfloat*)yuvMat);
+  Matrix4 yuvMat = m_convMatrix.GetYuvMat();
+  glUniformMatrix4fv(m_hYuvMat, 1, GL_FALSE, yuvMat.ToRaw());
   glUniformMatrix4fv(m_hProj,  1, GL_FALSE, m_proj);
   glUniformMatrix4fv(m_hModel, 1, GL_FALSE, m_model);
   glUniform1f(m_hAlpha, m_alpha);
 
-  GLfloat primMat[3][3];
-  if (m_convMatrix.GetPrimMat(primMat))
+  if (m_colorConversion)
   {
-    glUniformMatrix3fv(m_hPrimMat, 1, GL_FALSE, (GLfloat*)primMat);
+    Matrix3 primMat = m_convMatrix.GetPrimMat();
+    glUniformMatrix3fv(m_hPrimMat, 1, GL_FALSE, primMat.ToRaw());
     glUniform1f(m_hGammaSrc, m_convMatrix.GetGammaSrc());
     glUniform1f(m_hGammaDstInv, 1 / m_convMatrix.GetGammaDst());
   }
@@ -139,8 +138,7 @@ bool BaseYUV2RGBGLSLShader::OnEnabled()
 
     param *= m_toneMappingParam;
 
-    float coefs[3];
-    m_convMatrix.GetRGBYuvCoefs(AVColorSpace::AVCOL_SPC_BT709, coefs);
+    Matrix3x1 coefs = m_convMatrix.GetRGBYuvCoefs(AVColorSpace::AVCOL_SPC_BT709);
     glUniform3f(m_hCoefsDst, coefs[0], coefs[1], coefs[2]);
     glUniform1f(m_hToneP1, param);
   }

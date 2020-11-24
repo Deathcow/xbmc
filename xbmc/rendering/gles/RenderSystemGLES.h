@@ -93,15 +93,15 @@ public:
 
   void GUIShaderSetLayers(int layers);
 
-  void GUIShaderSetYUVMatrix(float (&yuv)[4][4]);
+  void GUIShaderSetYUVMatrix(float* yuv);
 
   void GUIShaderSetEnableColorConversion(bool enable);
-  void GUIShaderSetPrimaryMatrix(float (&mat)[3][3]);
+  void GUIShaderSetPrimaryMatrix(float* mat);
   void GUIShaderSetGammaSrc(float gamma);
   void GUIShaderSetGammaDstInv(float gamma);
 
   void GUIShaderSetToneMappingMethod(int method);
-  void GUIShaderSetRGBYUVCoefficients(float (&coefs)[3]);
+  void GUIShaderSetRGBYUVCoefficients(float* coefs);
   void GUIShaderSetToneMapParameter(float parameter);
 
 protected:

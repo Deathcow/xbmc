@@ -382,8 +382,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
       .SetDestinationBlack(m_videoSettings.m_Brightness * 0.01f - 0.5f)
       .SetDestinationLimitedRange(CServiceBroker::GetWinSystem()->UseLimitedColor());
 
-  float yuv[4][4];
-  matrix.GetYuvMat(yuv);
+  Matrix4 yuv = matrix.GetYuvMat();
 
   CLog::Log(LOGDEBUG, LOGVIDEO,
             "CRendererDRMPRIMEGLES::{} - source primary: {} destination primary: {}", __FUNCTION__,
@@ -404,17 +403,16 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
   CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - YUV matrix: {}", __FUNCTION__, yuvStr);
 
-  renderSystem->GUIShaderSetYUVMatrix(yuv);
+  renderSystem->GUIShaderSetYUVMatrix(yuv.ToRaw());
   renderSystem->GUIShaderSetEnableColorConversion(false);
 
   //! @todo: depend on output colorspace
   if (buf.m_srcPrimaries != AVCOL_PRI_BT709)
   {
-    float primMat[3][3];
-    matrix.GetPrimMat(primMat);
+    Matrix3 primMat = matrix.GetPrimMat();
 
     renderSystem->GUIShaderSetEnableColorConversion(true);
-    renderSystem->GUIShaderSetPrimaryMatrix(primMat);
+    renderSystem->GUIShaderSetPrimaryMatrix(primMat.ToRaw());
     renderSystem->GUIShaderSetGammaSrc(matrix.GetGammaSrc());
     renderSystem->GUIShaderSetGammaDstInv(1 / matrix.GetGammaDst());
 
@@ -457,9 +455,8 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
     param *= m_videoSettings.m_ToneMapParam;
 
-    float coefs[3];
-    matrix.GetRGBYuvCoefs(buf.m_srcColSpace, coefs);
-    renderSystem->GUIShaderSetRGBYUVCoefficients(coefs);
+    Matrix3x1 coefs = matrix.GetRGBYuvCoefs(buf.m_srcColSpace);
+    renderSystem->GUIShaderSetRGBYUVCoefficients(coefs.data());
     renderSystem->GUIShaderSetToneMappingMethod(m_videoSettings.m_ToneMapMethod);
     renderSystem->GUIShaderSetToneMapParameter(param);
 
