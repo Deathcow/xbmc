@@ -415,70 +415,68 @@ CConvertMatrix& CConvertMatrix::SetDestinationLimitedRange(bool limited)
   return *this;
 }
 
-const CMatrix<3>& CConvertMatrix::GenPrimMat()
+void CConvertMatrix::GenPrimMat()
 {
-  if (m_matPrim)
-    return *m_matPrim;
-
-  Primaries primToRGB;
-  Primaries primToXYZ;
-  switch (m_colPrimariesSrc)
+  if (m_colPrimariesDst != m_colPrimariesSrc)
   {
-    case AVCOL_PRI_BT709:
-      primToXYZ = PrimariesBT709;
-      m_gammaSrc = 2.2;
-      break;
-    case AVCOL_PRI_BT470BG:
-      primToXYZ = PrimariesBT610_625;
-      m_gammaSrc = 2.2;
-      break;
-    case AVCOL_PRI_SMPTE170M:
-    case AVCOL_PRI_SMPTE240M:
-      primToXYZ = PrimariesBT610_525;
-      m_gammaSrc = 2.2;
-      break;
-    case AVCOL_PRI_BT2020:
-      primToXYZ = PrimariesBT2020;
-      m_gammaSrc = 2.4;
-      break;
-    default:
-      primToXYZ = PrimariesBT709;
-      m_gammaSrc = 2.2;
-      break;
-  }
-  switch (m_colPrimariesDst)
-  {
-    case AVCOL_PRI_BT709:
-      primToRGB = PrimariesBT709;
-      m_gammaDst = 2.2;
-      break;
-    case AVCOL_PRI_BT470BG:
-      primToRGB = PrimariesBT610_625;
-      m_gammaDst = 2.2;
-      break;
-    case AVCOL_PRI_SMPTE170M:
-    case AVCOL_PRI_SMPTE240M:
-      primToRGB = PrimariesBT610_525;
-      m_gammaDst = 2.2;
-      break;
-    case AVCOL_PRI_BT2020:
-      primToRGB = PrimariesBT2020;
-      m_gammaDst = 2.4;
-      break;
-    default:
-      primToRGB = PrimariesBT709;
-      m_gammaDst = 2.2;
-      break;
-  }
-  PrimaryToXYZ toXYZ(primToXYZ.primaries, primToXYZ.whitepoint);
-  PrimaryToRGB toRGB(primToRGB.primaries, primToRGB.whitepoint);
+    Primaries primToRGB;
+    Primaries primToXYZ;
+    switch (m_colPrimariesSrc)
+    {
+      case AVCOL_PRI_BT709:
+        primToXYZ = PrimariesBT709;
+        m_gammaSrc = 2.2;
+        break;
+      case AVCOL_PRI_BT470BG:
+        primToXYZ = PrimariesBT610_625;
+        m_gammaSrc = 2.2;
+        break;
+      case AVCOL_PRI_SMPTE170M:
+      case AVCOL_PRI_SMPTE240M:
+        primToXYZ = PrimariesBT610_525;
+        m_gammaSrc = 2.2;
+        break;
+      case AVCOL_PRI_BT2020:
+        primToXYZ = PrimariesBT2020;
+        m_gammaSrc = 2.4;
+        break;
+      default:
+        primToXYZ = PrimariesBT709;
+        m_gammaSrc = 2.2;
+        break;
+    }
+    switch (m_colPrimariesDst)
+    {
+      case AVCOL_PRI_BT709:
+        primToRGB = PrimariesBT709;
+        m_gammaDst = 2.2;
+        break;
+      case AVCOL_PRI_BT470BG:
+        primToRGB = PrimariesBT610_625;
+        m_gammaDst = 2.2;
+        break;
+      case AVCOL_PRI_SMPTE170M:
+      case AVCOL_PRI_SMPTE240M:
+        primToRGB = PrimariesBT610_525;
+        m_gammaDst = 2.2;
+        break;
+      case AVCOL_PRI_BT2020:
+        primToRGB = PrimariesBT2020;
+        m_gammaDst = 2.4;
+        break;
+      default:
+        primToRGB = PrimariesBT709;
+        m_gammaDst = 2.2;
+        break;
+    }
+    PrimaryToXYZ toXYZ(primToXYZ.primaries, primToXYZ.whitepoint);
+    PrimaryToRGB toRGB(primToRGB.primaries, primToRGB.whitepoint);
 
-  m_matPrim = std::make_unique<CMatrix<3>>(toRGB * toXYZ);
-
-  return *m_matPrim;
+  m_colPrimariesDst = dst;
+  return *this;
 }
 
-const CGlMatrix& CConvertMatrix::GenMat()
+void CConvertMatrix::GenMat()
 {
   if (m_mat)
     return *m_mat;
@@ -550,7 +548,10 @@ const CGlMatrix& CConvertMatrix::GenMat()
 
 Matrix4 CConvertMatrix::GetYuvMat()
 {
-  const CGlMatrix& mat = GenMat();
+  GenMat();
+
+  if (!m_pMat)
+    return;
 
   CScale contrast(m_contrast, m_contrast, m_contrast);
   CTranslate black(m_black, m_black, m_black);
@@ -585,10 +586,10 @@ Matrix4 CConvertMatrix::GetYuvMat()
 
 Matrix3 CConvertMatrix::GetPrimMat()
 {
-  if (m_colPrimariesDst == m_colPrimariesSrc)
-    return Matrix3();
+  GenPrimMat();
 
-  const Matrix3& matPrim = GenPrimMat();
+  if (!m_pMatPrim)
+    return false;
 
   Matrix3 dst;
 

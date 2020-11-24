@@ -197,12 +197,12 @@ public:
   /**
    * @brief Get the YUV Matrix for the YUV to RGB conversion.
    */
-  Matrix4 GetYuvMat();
+  void GetYuvMat(float (&mat)[4][4]);
 
   /**
    * @brief Get the Primaries Matrix for the primaries conversion.
    */
-  Matrix3 GetPrimMat();
+  bool GetPrimMat(float (&mat)[3][3]);
 
   /**
    * @brief Get the gamma source value. Used for color primary conversion..
@@ -220,8 +220,8 @@ public:
   static Matrix3x1 GetRGBYuvCoefs(AVColorSpace colspace);
 
 private:
-  const CGlMatrix& GenMat();
-  const CMatrix<3>& GenPrimMat();
+  void GenMat();
+  void GenPrimMat();
 
   std::unique_ptr<CGlMatrix> m_mat;
   std::unique_ptr<CMatrix<3>> m_matPrim;
