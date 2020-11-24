@@ -680,7 +680,7 @@ void CRenderSystemGLES::GUIShaderSetLayers(int layers)
     m_pShader[m_method]->SetLayers(layers);
 }
 
-void CRenderSystemGLES::GUIShaderSetYUVMatrix(float (&yuv)[4][4])
+void CRenderSystemGLES::GUIShaderSetYUVMatrix(float* yuv)
 {
   if (m_pShader[m_method])
     m_pShader[m_method]->SetYUVMatrix(yuv);
@@ -692,7 +692,7 @@ void CRenderSystemGLES::GUIShaderSetEnableColorConversion(bool enable)
     m_pShader[m_method]->SetEnableColorConversion(enable);
 }
 
-void CRenderSystemGLES::GUIShaderSetPrimaryMatrix(float (&mat)[3][3])
+void CRenderSystemGLES::GUIShaderSetPrimaryMatrix(float* mat)
 {
   if (m_pShader[m_method])
     m_pShader[m_method]->SetPrimaryMatrix(mat);
@@ -716,7 +716,7 @@ void CRenderSystemGLES::GUIShaderSetToneMappingMethod(int method)
     m_pShader[m_method]->SetToneMappingMethod(method);
 }
 
-void CRenderSystemGLES::GUIShaderSetRGBYUVCoefficients(float (&coefs)[3])
+void CRenderSystemGLES::GUIShaderSetRGBYUVCoefficients(float* coefs)
 {
   if (m_pShader[m_method])
     m_pShader[m_method]->SetRGBYUVCoefficients(coefs);

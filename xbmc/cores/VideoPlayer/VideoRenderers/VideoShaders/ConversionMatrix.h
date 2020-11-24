@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <array>
 #include <memory>
 
 extern "C" {
@@ -18,34 +19,63 @@ template <unsigned Order>
 class CMatrix
 {
 public:
-  CMatrix(float (&src)[Order][Order]);
-  CMatrix(float (&src)[Order-1][Order-1]);
-  CMatrix& operator=(const CMatrix& src);
-  CMatrix& operator=(const float (&src)[Order-1][Order-1]);
+  CMatrix() = default;
+  CMatrix(CMatrix<Order - 1>& other);
+  CMatrix(std::array<std::array<float, Order>, Order>& other);
+  CMatrix(std::array<std::array<float, Order - 1>, Order - 1>& other);
   virtual ~CMatrix() = default;
 
-  float (&Get())[Order][Order];
-  CMatrix Invert();
+  virtual CMatrix operator*(const std::array<std::array<float, Order>, Order>& other);
+
   CMatrix operator*(const CMatrix& other);
   CMatrix operator*=(const CMatrix& other);
-  virtual CMatrix operator*(const float (&other)[Order][Order]);
+
+  CMatrix& operator=(const std::array<std::array<float, Order - 1>, Order - 1>& other);
+
+  std::array<float, Order>& operator[](int index) { return m_mat[index]; }
+
+  std::array<std::array<float, Order>, Order>& Get();
+
+  CMatrix Invert();
+
+  float* ToRaw()
+  {
+    float* raw{nullptr};
+
+    for (unsigned i = 0; i < Order; i++)
+    {
+      for (unsigned j = 0; j < Order; j++)
+      {
+        raw = &m_mat[i][j];
+        raw++;
+      }
+    }
+
+    raw -= Order * Order;
+    return raw;
+  }
+
+  void SetInitialized() { m_initialized = true; }
+  bool IsInitialized() { return m_initialized; }
 
 protected:
-  CMatrix() = default;
+  std::array<std::array<float, Order>, Order> Invert(
+      std::array<std::array<float, Order>, Order>& other);
 
-  void Copy(float (&dst)[Order][Order], const float (&src)[Order][Order]);
-  void Invert(float (&dst)[Order][Order], float (&src)[Order][Order]);
+  std::array<std::array<float, Order>, Order> m_mat{{}};
 
-  float m_mat[Order][Order] = {};
+private:
+  bool m_initialized{false};
 };
 
 class CGlMatrix : public CMatrix<4>
 {
 public:
   CGlMatrix() = default;
-  CGlMatrix(float (&src)[3][3]);
+  CGlMatrix(CMatrix<3>& other);
+  CGlMatrix(std::array<std::array<float, 3>, 3>& other);
   ~CGlMatrix() override = default;
-  CMatrix operator*(const float (&other)[4][4]) override;
+  CMatrix operator*(const std::array<std::array<float, 4>, 4>& other) override;
 };
 
 class CScale : public CGlMatrix
@@ -67,7 +97,6 @@ class ConversionToRGB : public CMatrix<3>
 public:
   ConversionToRGB(float Kr, float Kb);
   ~ConversionToRGB() override = default;
-  ConversionToRGB& operator=(const float (&src)[3][3]);
 
 protected:
   ConversionToRGB() = default;
@@ -98,6 +127,10 @@ public:
 
 //------------------------------------------------------------------------------
 
+using Matrix4 = CMatrix<4>;
+using Matrix3 = CMatrix<3>;
+using Matrix3x1 = std::array<float, 3>;
+
 class CConvertMatrix
 {
 public:
@@ -115,19 +148,20 @@ public:
   CConvertMatrix& SetDestinationBlack(float black);
   CConvertMatrix& SetDestinationLimitedRange(bool limited);
 
-  void GetYuvMat(float (&mat)[4][4]);
-  bool GetPrimMat(float (&mat)[3][3]);
+  Matrix4 GetYuvMat();
+  Matrix3 GetPrimMat();
   float GetGammaSrc();
   float GetGammaDst();
 
-  static bool GetRGBYuvCoefs(AVColorSpace colspace, float (&coefs)[3]);
+  static Matrix3x1 GetRGBYuvCoefs(AVColorSpace colspace);
 
 protected:
-  void GenMat();
-  void GenPrimMat();
+  CGlMatrix GenMat();
+  CMatrix<3> GenPrimMat();
 
-  std::unique_ptr<CGlMatrix> m_pMat;
-  std::unique_ptr<CMatrix<3>> m_pMatPrim;
+  CGlMatrix m_mat;
+  CMatrix<3> m_matPrim;
+
   AVColorSpace m_colSpace = AVCOL_SPC_BT709;
   AVColorPrimaries m_colPrimariesSrc = AVCOL_PRI_BT709;
   float m_gammaSrc = 2.2f;
