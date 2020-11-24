@@ -42,15 +42,15 @@ public:
 
   void SetLayers(int layers);
 
-  void SetYUVMatrix(float (&yuv)[4][4]);
+  void SetYUVMatrix(float* yuv);
 
   void SetEnableColorConversion(bool enable);
-  void SetPrimaryMatrix(float (&mat)[3][3]);
+  void SetPrimaryMatrix(float* mat);
   void SetGammaSrc(float gamma);
   void SetGammaDstInv(float gamma);
 
   void SetToneMappingMethod(int method);
-  void SetRGBYUVCoefficients(float (&coefs)[3]);
+  void SetRGBYUVCoefficients(float* coefs);
   void SetToneMapParameter(float parameter);
 
 protected:

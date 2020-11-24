@@ -8,6 +8,8 @@
 
 #include "ConversionMatrix.h"
 
+#include <stdexcept>
+
 //------------------------------------------------------------------------------
 // constants for primaries and transfers functions and color models
 //------------------------------------------------------------------------------
@@ -44,14 +46,17 @@ const Primaries PrimariesBT2020 = {{{0.708, 0.292}, {0.170, 0.797}, {0.131, 0.04
 //------------------------------------------------------------------------------
 // source: http://timjones.io/blog/archive/2014/10/20/the-matrix-inverted
 
-template <unsigned Order>
-float CalculateDeterminant(float (&src)[Order][Order]);
+template<unsigned Order>
+float CalculateDeterminant(const std::array<std::array<float, Order>, Order>& src);
 
-template <unsigned Order>
-void GetSubmatrix(float (&dest)[Order-1][Order-1], float (&src)[Order][Order], unsigned row, unsigned col)
+template<unsigned Order>
+std::array<std::array<float, Order - 1>, Order - 1> GetSubmatrix(
+    const std::array<std::array<float, Order>, Order>& src, unsigned row, unsigned col)
 {
   unsigned colCount = 0;
   unsigned rowCount = 0;
+
+  std::array<std::array<float, Order - 1>, Order - 1> dest;
 
   for (unsigned i = 0; i < Order; i++)
   {
@@ -69,18 +74,22 @@ void GetSubmatrix(float (&dest)[Order-1][Order-1], float (&src)[Order][Order], u
       rowCount++;
     }
   }
+
+  return dest;
 }
 
-template <unsigned Order>
-float CalculateMinor(float (&src)[Order][Order], unsigned row, unsigned col)
+template<unsigned Order>
+float CalculateMinor(const std::array<std::array<float, Order>, Order>& src,
+                     unsigned row,
+                     unsigned col)
 {
-  float sub[Order-1][Order-1];
-  GetSubmatrix<Order>(sub, src, row, col);
+  const std::array<std::array<float, Order - 1>, Order - 1> sub =
+      GetSubmatrix<Order>(src, row, col);
   return CalculateDeterminant<Order - 1>(sub);
 }
 
-template <unsigned Order>
-float CalculateDeterminant(float (&src)[Order][Order])
+template<unsigned Order>
+float CalculateDeterminant(const std::array<std::array<float, Order>, Order>& src)
 {
   float det = 0.0f;
 
@@ -97,8 +106,8 @@ float CalculateDeterminant(float (&src)[Order][Order])
   return det;
 }
 
-template <>
-float CalculateDeterminant<2>(float (&src)[2][2])
+template<>
+float CalculateDeterminant<2>(const std::array<std::array<float, 2>, 2>& src)
 {
   return src[0][0] * src[1][1] - src[0][1] * src[1][0];
 }
@@ -107,31 +116,31 @@ float CalculateDeterminant<2>(float (&src)[2][2])
 // Matrix classes
 //------------------------------------------------------------------------------
 
-template <unsigned Order>
-CMatrix<Order>::CMatrix(float (&src)[Order][Order])
+template<unsigned Order>
+CMatrix<Order>::CMatrix(std::array<std::array<float, Order>, Order>& other)
 {
-  Copy(m_mat, src);
+  m_mat = other;
 }
 
-template <unsigned Order>
-CMatrix<Order>::CMatrix(float (&src)[Order-1][Order-1])
+template<unsigned Order>
+CMatrix<Order>::CMatrix(std::array<std::array<float, Order - 1>, Order - 1>& other)
 {
-  *this = src;
+  *this = other;
 }
 
-template <unsigned Order>
-CMatrix<Order>& CMatrix<Order>::operator=(const CMatrix& src)
+template<unsigned Order>
+CMatrix<Order>::CMatrix(CMatrix<Order - 1>& other)
 {
-  Copy(m_mat, src.m_mat);
-  return *this;
+  *this = other.Get();
 }
 
-template <unsigned Order>
-CMatrix<Order>& CMatrix<Order>::operator=(const float (&src)[Order-1][Order-1])
+template<unsigned Order>
+CMatrix<Order>& CMatrix<Order>::operator=(
+    const std::array<std::array<float, Order - 1>, Order - 1>& other)
 {
   for (unsigned i=0; i<Order-1; ++i)
     for (unsigned j=0; j<Order-1; ++j)
-      m_mat[i][j] = src[i][j];
+      m_mat[i][j] = other[i][j];
 
   for (unsigned i=0; i<Order; ++i)
     m_mat[i][Order-1] = 0;
@@ -142,18 +151,10 @@ CMatrix<Order>& CMatrix<Order>::operator=(const float (&src)[Order-1][Order-1])
   return *this;
 }
 
-template <unsigned Order>
-float (&CMatrix<Order>::Get())[Order][Order]
+template<unsigned Order>
+std::array<std::array<float, Order>, Order>& CMatrix<Order>::Get()
 {
   return m_mat;
-}
-
-template <unsigned Order>
-CMatrix<Order> CMatrix<Order>::Invert()
-{
-  CMatrix<Order> ret;
-  Invert(ret.m_mat, m_mat);
-  return ret;
 }
 
 template <unsigned Order>
@@ -170,8 +171,8 @@ CMatrix<Order> CMatrix<Order>::operator*=(const CMatrix& other)
   return *this;
 }
 
-template <unsigned Order>
-CMatrix<Order> CMatrix<Order>::operator*(const float (&other)[Order][Order])
+template<unsigned Order>
+CMatrix<Order> CMatrix<Order>::operator*(const std::array<std::array<float, Order>, Order>& other)
 {
   CMatrix<Order> ret;
   for (unsigned i=0; i<Order; ++i)
@@ -182,20 +183,24 @@ CMatrix<Order> CMatrix<Order>::operator*(const float (&other)[Order][Order])
   return ret;
 }
 
-template <unsigned Order>
-void CMatrix<Order>::Copy(float (&dst)[Order][Order], const float (&src)[Order][Order])
+template<unsigned Order>
+CMatrix<Order> CMatrix<Order>::Invert()
 {
-  for (unsigned i=0; i<Order; ++i)
-    for (unsigned j=0; j<Order; ++j)
-      dst[i][j] = src[i][j];
+  CMatrix<Order> tmp;
+  tmp.m_mat = Invert(m_mat);
+  *this = tmp;
+  return *this;
 }
 
-template <unsigned Order>
-void CMatrix<Order>::Invert(float (&dst)[Order][Order], float (&src)[Order][Order])
+template<unsigned Order>
+std::array<std::array<float, Order>, Order> CMatrix<Order>::Invert(
+    std::array<std::array<float, Order>, Order>& other)
 {
   // Calculate the inverse of the determinant of src.
-  float det = CalculateDeterminant<Order>(src);
+  float det = CalculateDeterminant<Order>(other);
   float inverseDet = 1.0f / det;
+
+  std::array<std::array<float, Order>, Order> dst;
 
   for (unsigned j = 0; j < Order; j++)
   {
@@ -203,7 +208,7 @@ void CMatrix<Order>::Invert(float (&dst)[Order][Order], float (&src)[Order][Orde
     {
       // Get minor of element (j, i) - not (i, j) because
       // this is where the transpose happens.
-      float minor = CalculateMinor<Order>(src, j, i);
+      float minor = CalculateMinor<Order>(other, j, i);
 
       // Multiply by (−1)^{i+j}
       float factor = ((i + j) % 2 == 1) ? -1.0f : 1.0f;
@@ -212,19 +217,25 @@ void CMatrix<Order>::Invert(float (&dst)[Order][Order], float (&src)[Order][Orde
       dst[i][j] = inverseDet * cofactor;
     }
   }
+
+  return dst;
 }
 
-CGlMatrix::CGlMatrix(float (&src)[3][3]) : CMatrix<4>(src)
+CGlMatrix::CGlMatrix(CMatrix<3>& other) : CMatrix<4>(other)
 {
 
 }
 
-CGlMatrix::CMatrix CGlMatrix::operator*(const float (&other)[4][4])
+CGlMatrix::CGlMatrix(std::array<std::array<float, 3>, 3>& other) : CMatrix<4>(other)
+{
+}
+
+CGlMatrix::CMatrix CGlMatrix::operator*(const std::array<std::array<float, 4>, 4>& other)
 {
   CGlMatrix ret;
 
-  float (&left)[4][4] = m_mat;
-  const float (&right)[4][4] = other;
+  std::array<std::array<float, 4>, 4>& left = m_mat;
+  const std::array<std::array<float, 4>, 4>& right = other;
 
   ret.m_mat[0][0] = left[0][0] * right[0][0] + left[0][1] * right[1][0] + left[0][2] * right[2][0];
   ret.m_mat[0][1] = left[0][0] * right[0][1] + left[0][1] * right[1][1] + left[0][2] * right[2][1];
@@ -278,15 +289,8 @@ ConversionToRGB::ConversionToRGB(float Kr, float Kb)
   m_mat[1][0] = -Kr/CbDen; m_mat[1][1] = -Kg/CbDen; m_mat[1][2] = 0.5;
   m_mat[2][0] = 0.5;       m_mat[2][1] = -Kg/CrDen; m_mat[2][2] = -Kb/CrDen;
 
-  CMatrix<3> inv(m_mat);
-  Copy(m_mat, inv.Invert().Get());
+  m_mat = Invert(m_mat);
 };
-
-ConversionToRGB& ConversionToRGB::operator=(const float (&src)[3][3])
-{
-  Copy(m_mat, src);
-  return *this;
-}
 
 PrimaryToXYZ::PrimaryToXYZ(const float (&primaries)[3][2], const float (&whitepoint)[2])
 {
@@ -331,8 +335,7 @@ float PrimaryToXYZ::CalcRy(const float By, const float Gy)
 
 PrimaryToRGB::PrimaryToRGB(float (&primaries)[3][2], float (&whitepoint)[2]) : PrimaryToXYZ(primaries, whitepoint)
 {
-  CMatrix<3> inv(m_mat);
-  Copy(m_mat, inv.Invert().Get());
+  m_mat = Invert(m_mat);
 }
 
 //------------------------------------------------------------------------------
@@ -391,73 +394,65 @@ CConvertMatrix& CConvertMatrix::SetDestinationLimitedRange(bool limited)
   return *this;
 }
 
-void CConvertMatrix::GenPrimMat()
+CMatrix<3> CConvertMatrix::GenPrimMat()
 {
-  if (m_colPrimariesDst != m_colPrimariesSrc)
+  Primaries primToRGB;
+  Primaries primToXYZ;
+  switch (m_colPrimariesSrc)
   {
-    Primaries primToRGB;
-    Primaries primToXYZ;
-    switch (m_colPrimariesSrc)
-    {
-      case AVCOL_PRI_BT709:
-        primToXYZ = PrimariesBT709;
-        m_gammaSrc = 2.2;
-        break;
-      case AVCOL_PRI_BT470BG:
-        primToXYZ = PrimariesBT610_625;
-        m_gammaSrc = 2.2;
-        break;
-      case AVCOL_PRI_SMPTE170M:
-      case AVCOL_PRI_SMPTE240M:
-        primToXYZ = PrimariesBT610_525;
-        m_gammaSrc = 2.2;
-        break;
-      case AVCOL_PRI_BT2020:
-        primToXYZ = PrimariesBT2020;
-        m_gammaSrc = 2.4;
-        break;
-      default:
-        primToXYZ = PrimariesBT709;
-        m_gammaSrc = 2.2;
-        break;
-    }
-    switch (m_colPrimariesDst)
-    {
-      case AVCOL_PRI_BT709:
-        primToRGB = PrimariesBT709;
-        m_gammaDst = 2.2;
-        break;
-      case AVCOL_PRI_BT470BG:
-        primToRGB = PrimariesBT610_625;
-        m_gammaDst = 2.2;
-        break;
-      case AVCOL_PRI_SMPTE170M:
-      case AVCOL_PRI_SMPTE240M:
-        primToRGB = PrimariesBT610_525;
-        m_gammaDst = 2.2;
-        break;
-      case AVCOL_PRI_BT2020:
-        primToRGB = PrimariesBT2020;
-        m_gammaDst = 2.4;
-        break;
-      default:
-        primToRGB = PrimariesBT709;
-        m_gammaDst = 2.2;
-        break;
-    }
-    PrimaryToXYZ toXYZ(primToXYZ.primaries, primToXYZ.whitepoint);
-    PrimaryToRGB toRGB(primToRGB.primaries, primToRGB.whitepoint);
+    case AVCOL_PRI_BT709:
+      primToXYZ = PrimariesBT709;
+      m_gammaSrc = 2.2;
+      break;
+    case AVCOL_PRI_BT470BG:
+      primToXYZ = PrimariesBT610_625;
+      m_gammaSrc = 2.2;
+      break;
+    case AVCOL_PRI_SMPTE170M:
+    case AVCOL_PRI_SMPTE240M:
+      primToXYZ = PrimariesBT610_525;
+      m_gammaSrc = 2.2;
+      break;
+    case AVCOL_PRI_BT2020:
+      primToXYZ = PrimariesBT2020;
+      m_gammaSrc = 2.4;
+      break;
+    default:
+      primToXYZ = PrimariesBT709;
+      m_gammaSrc = 2.2;
+      break;
+  }
+  switch (m_colPrimariesDst)
+  {
+    case AVCOL_PRI_BT709:
+      primToRGB = PrimariesBT709;
+      m_gammaDst = 2.2;
+      break;
+    case AVCOL_PRI_BT470BG:
+      primToRGB = PrimariesBT610_625;
+      m_gammaDst = 2.2;
+      break;
+    case AVCOL_PRI_SMPTE170M:
+    case AVCOL_PRI_SMPTE240M:
+      primToRGB = PrimariesBT610_525;
+      m_gammaDst = 2.2;
+      break;
+    case AVCOL_PRI_BT2020:
+      primToRGB = PrimariesBT2020;
+      m_gammaDst = 2.4;
+      break;
+    default:
+      primToRGB = PrimariesBT709;
+      m_gammaDst = 2.2;
+      break;
+  }
+  PrimaryToXYZ toXYZ(primToXYZ.primaries, primToXYZ.whitepoint);
+  PrimaryToRGB toRGB(primToRGB.primaries, primToRGB.whitepoint);
 
-    CMatrix<3> tmp = toRGB*toXYZ;
-    m_pMatPrim.reset(new CMatrix<3>(tmp));
-  }
-  else
-  {
-    m_pMatPrim.reset();
-  }
+  return toRGB * toXYZ;
 }
 
-void CConvertMatrix::GenMat()
+CGlMatrix CConvertMatrix::GenMat()
 {
   ConvYCbCr convYCbCr;
   switch (m_colSpace)
@@ -482,11 +477,10 @@ void CConvertMatrix::GenMat()
   }
 
   ConversionToRGB mConvRGB(convYCbCr.Kr, convYCbCr.Kb);
-
-  m_pMat.reset(new CGlMatrix(mConvRGB.Get()));
+  CGlMatrix mat(mConvRGB);
 
   CTranslate trans(0, -0.5, -0.5);
-  *m_pMat *= trans;
+  mat *= trans;
 
   if (m_limitedSrc)
   {
@@ -494,22 +488,22 @@ void CConvertMatrix::GenMat()
     {
       CScale scale(4080.0f / (3760 - 256), 4080.0f / (3840 - 256), 4080.0f / (3840 - 256));
       CTranslate trans(- 256.0f / 4080, - 256.0f / 4080, - 256.0f / 4080);
-      *m_pMat *= scale;
-      *m_pMat *= trans;
+      mat *= scale;
+      mat *= trans;
     }
     else if (m_srcBits == 10)
     {
       CScale scale(1020.0f / (940 - 64), 1020.0f / (960 - 64), 1020.0f / (960 - 64));
       CTranslate trans(- 64.0f / 1020, - 64.0f / 1020, - 64.0f / 1020);
-      *m_pMat *= scale;
-      *m_pMat *= trans;
+      mat *= scale;
+      mat *= trans;
     }
     else
     {
       CScale scale(255.0f / (235 - 16), 255.0f / (240 - 16), 255.0f / (240 - 16));
       CTranslate trans(- 16.0f / 255, - 16.0f / 255, - 16.0f / 255);
-      *m_pMat *= scale;
-      *m_pMat *= trans;
+      mat *= scale;
+      mat *= trans;
     }
   }
 
@@ -517,16 +511,19 @@ void CConvertMatrix::GenMat()
   {
     float val = 65535.0f / ((1 << m_srcTextureBits) - 1);
     CScale scale(val, val, val);
-    *m_pMat *= scale;
+    mat *= scale;
   }
+
+  return mat;
 }
 
-void CConvertMatrix::GetYuvMat(float (&mat)[4][4])
+Matrix4 CConvertMatrix::GetYuvMat()
 {
-  GenMat();
-
-  if (!m_pMat)
-    return;
+  if (!m_mat.IsInitialized())
+  {
+    m_mat = GenMat();
+    m_mat.SetInitialized();
+  }
 
   CScale contrast(m_contrast, m_contrast, m_contrast);
   CTranslate black(m_black, m_black, m_black);
@@ -543,33 +540,39 @@ void CConvertMatrix::GetYuvMat(float (&mat)[4][4])
     ret *= scale;
   }
 
-  ret *= m_pMat->Get();
-  float (&src)[4][4] = ret.Get();
+  ret *= m_mat;
 
+  CMatrix<4> dst;
   for (int i=0; i<4; ++i)
     for (int j=0; j<4; ++j)
-      mat[i][j] = src[j][i];
+      dst[i][j] = ret[j][i];
 
-  mat[0][3] = 0.0f;
-  mat[1][3] = 0.0f;
-  mat[2][3] = 0.0f;
-  mat[3][3] = 1.0f;
+  dst[0][3] = 0.0f;
+  dst[1][3] = 0.0f;
+  dst[2][3] = 0.0f;
+  dst[3][3] = 1.0f;
+
+  return dst;
 }
 
-bool CConvertMatrix::GetPrimMat(float (&mat)[3][3])
+Matrix3 CConvertMatrix::GetPrimMat()
 {
-  GenPrimMat();
+  if (m_colPrimariesDst == m_colPrimariesSrc)
+    return Matrix3();
 
-  if (!m_pMatPrim)
-    return false;
+  if (!m_matPrim.IsInitialized())
+  {
+    m_matPrim = GenPrimMat();
+    m_matPrim.SetInitialized();
+  }
 
-  float (&src)[3][3] = m_pMatPrim->Get();
+  Matrix3 dst;
 
   for (int i=0; i<3; ++i)
     for (int j=0; j<3; ++j)
-      mat[i][j] = src[j][i];
+      dst[i][j] = m_matPrim[j][i];
 
-  return true;
+  return dst;
 }
 
 float CConvertMatrix::GetGammaSrc()
@@ -582,8 +585,10 @@ float CConvertMatrix::GetGammaDst()
   return m_gammaDst;
 }
 
-bool CConvertMatrix::GetRGBYuvCoefs(AVColorSpace colspace, float (&coefs)[3])
+Matrix3x1 CConvertMatrix::GetRGBYuvCoefs(AVColorSpace colspace)
 {
+  Matrix3x1 coefs;
+
   switch (colspace)
   {
     case AVCOL_SPC_BT709:
@@ -609,7 +614,8 @@ bool CConvertMatrix::GetRGBYuvCoefs(AVColorSpace colspace, float (&coefs)[3])
       coefs[2] = BT2020YCbCr.Kb;
       break;
     default:
-      return false;
+      throw std::invalid_argument("unknown colorspace: " + std::to_string(colspace));
   }
-  return true;
+
+  return coefs;
 }
