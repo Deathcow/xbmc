@@ -372,11 +372,15 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   renderSystem->GUIShaderSetAlpha(shaderAlpha);
 
   CConvertMatrix matrix;
-  matrix.SetColPrimaries(AVCOL_PRI_BT709, buf.m_srcPrimaries);
-  matrix.SetColParams(buf.m_srcColSpace, buf.m_srcBits, !buf.m_srcFullRange,
-                      buf.texture.GetTextureBits());
-  matrix.SetParams(m_videoSettings.m_Contrast * 0.02f, m_videoSettings.m_Brightness * 0.01f - 0.5f,
-                   CServiceBroker::GetWinSystem()->UseLimitedColor());
+  matrix.SetSourceColorSpace(buf.m_srcColSpace)
+      .SetSourceBitDepth(buf.m_srcBits)
+      .SetSourceLimitedRange(!buf.m_srcFullRange)
+      .SetSourceTextureBitDepth(buf.texture->GetTextureBits())
+      .SetSourceColorPrimaries(buf.m_srcPrimaries)
+      .SetDestinationColorPrimaries(AVCOL_PRI_BT709)
+      .SetDestinationContrast(m_videoSettings.m_Contrast * 0.02f)
+      .SetDestinationBlack(m_videoSettings.m_Brightness * 0.01f - 0.5f)
+      .SetDestinationLimitedRange(CServiceBroker::GetWinSystem()->UseLimitedColor());
 
   float yuv[4][4];
   matrix.GetYuvMat(yuv);
