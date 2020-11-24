@@ -168,7 +168,7 @@ CMatrix<Order> CMatrix<Order>::operator*(const CMatrix& other)
 }
 
 template<uint8_t Order>
-CMatrix<Order>& CMatrix<Order>::operator*=(const CMatrix& other)
+CMatrix<Order> CMatrix<Order>::operator*=(const CMatrix& other)
 {
   CMatrix<Order> tmp = *this * other.m_mat;
   *this = tmp;
