@@ -204,9 +204,9 @@ void CGLESShader::SetLayers(int layers)
   glUniform1i(m_hLayers, layers);
 }
 
-void CGLESShader::SetYUVMatrix(float (&yuv)[4][4])
+void CGLESShader::SetYUVMatrix(float* yuv)
 {
-  glUniformMatrix4fv(m_hyuvMatrix, 1, GL_FALSE, reinterpret_cast<GLfloat*>(yuv));
+  glUniformMatrix4fv(m_hyuvMatrix, 1, GL_FALSE, yuv);
 }
 
 void CGLESShader::SetEnableColorConversion(bool enable)
@@ -214,9 +214,9 @@ void CGLESShader::SetEnableColorConversion(bool enable)
   glUniform1i(m_henableColorConversion, static_cast<int>(enable));
 }
 
-void CGLESShader::SetPrimaryMatrix(float (&mat)[3][3])
+void CGLESShader::SetPrimaryMatrix(float* mat)
 {
-  glUniformMatrix3fv(m_hprimaryMatrix, 1, GL_FALSE, reinterpret_cast<GLfloat*>(mat));
+  glUniformMatrix3fv(m_hprimaryMatrix, 1, GL_FALSE, mat);
 }
 
 void CGLESShader::SetGammaSrc(float gamma)
@@ -234,7 +234,7 @@ void CGLESShader::SetToneMappingMethod(int method)
   glUniform1i(m_htoneMapMethod, method);
 }
 
-void CGLESShader::SetRGBYUVCoefficients(float (&coefs)[3])
+void CGLESShader::SetRGBYUVCoefficients(float* coefs)
 {
   glUniform3f(m_hcoefs, coefs[0], coefs[1], coefs[2]);
 }

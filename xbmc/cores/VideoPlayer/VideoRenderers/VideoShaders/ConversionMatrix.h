@@ -22,14 +22,14 @@ class CMatrix
 public:
   CMatrix() = default;
   explicit CMatrix(const CMatrix<Order - 1>& other);
-  explicit CMatrix(const std::array<std::array<float, Order>, Order>& other) { m_mat = other; }
+  explicit CMatrix(const std::array<std::array<float, Order>, Order>& other);
   explicit CMatrix(const std::array<std::array<float, Order - 1>, Order - 1>& other);
   virtual ~CMatrix() = default;
 
   virtual CMatrix operator*(const std::array<std::array<float, Order>, Order>& other);
 
   CMatrix operator*(const CMatrix& other);
-  CMatrix& operator*=(const CMatrix& other);
+  CMatrix operator*=(const CMatrix& other);
 
   CMatrix& operator=(const std::array<std::array<float, Order - 1>, Order - 1>& other);
 
@@ -56,21 +56,40 @@ public:
 
   std::array<float, Order>& operator[](int index) { return m_mat[index]; }
 
-  const std::array<float, Order>& operator[](int index) const { return m_mat[index]; }
-
-  std::array<std::array<float, Order>, Order>& Get();
+  const std::array<float, Order>& operator[](int index) const { return m_mat[index];  }
 
   const std::array<std::array<float, Order>, Order>& Get() const;
 
-  CMatrix& Invert();
+  CMatrix Invert();
 
-  float* ToRaw() { return &m_mat[0][0]; }
+  float* ToRaw()
+  {
+    float* raw{nullptr};
+
+    for (unsigned i = 0; i < Order; i++)
+    {
+      for (unsigned j = 0; j < Order; j++)
+      {
+        raw = &m_mat[i][j];
+        raw++;
+      }
+    }
+
+    raw -= Order * Order;
+    return raw;
+  }
+
+  void SetInitialized() { m_initialized = true; }
+  bool IsInitialized() { return m_initialized; }
 
 protected:
   std::array<std::array<float, Order>, Order> Invert(
       std::array<std::array<float, Order>, Order>& other) const;
 
   std::array<std::array<float, Order>, Order> m_mat{{}};
+
+private:
+  bool m_initialized{false};
 };
 
 class CGlMatrix : public CMatrix<4>
@@ -197,12 +216,12 @@ public:
   /**
    * @brief Get the YUV Matrix for the YUV to RGB conversion.
    */
-  void GetYuvMat(float (&mat)[4][4]);
+  Matrix4 GetYuvMat();
 
   /**
    * @brief Get the Primaries Matrix for the primaries conversion.
    */
-  bool GetPrimMat(float (&mat)[3][3]);
+  Matrix3 GetPrimMat();
 
   /**
    * @brief Get the gamma source value. Used for color primary conversion..
@@ -220,11 +239,11 @@ public:
   static Matrix3x1 GetRGBYuvCoefs(AVColorSpace colspace);
 
 private:
-  void GenMat();
-  void GenPrimMat();
+  CGlMatrix GenMat();
+  CMatrix<3> GenPrimMat();
 
-  std::unique_ptr<CGlMatrix> m_mat;
-  std::unique_ptr<CMatrix<3>> m_matPrim;
+  CGlMatrix m_mat;
+  CMatrix<3> m_matPrim;
 
   AVColorSpace m_colSpace = AVCOL_SPC_BT709;
   AVColorPrimaries m_colPrimariesSrc = AVCOL_PRI_BT709;
