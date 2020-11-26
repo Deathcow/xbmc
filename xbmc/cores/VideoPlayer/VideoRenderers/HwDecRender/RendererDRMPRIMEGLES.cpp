@@ -135,8 +135,8 @@ bool CRendererDRMPRIMEGLES::Configure(const VideoPicture& picture,
         dynamic_cast<KODI::WINDOWING::GBM::CWinSystemGbm*>(CServiceBroker::GetWinSystem());
     if (winSystem)
     {
-      m_videoLayerBridge = std::make_shared<CVideoLayerBridgeDRMPRIME>(
-          std::dynamic_pointer_cast<KODI::WINDOWING::GBM::CDRMAtomic>(winSystem->GetDrm()));
+      auto drm = std::dynamic_pointer_cast<KODI::WINDOWING::GBM::CDRMAtomic>(winSystem->GetDrm());
+      m_videoLayerBridge = std::make_shared<CVideoLayerBridgeDRMPRIME>(drm);
 
       auto buffer = dynamic_cast<CVideoBufferDRMPRIME*>(picture.videoBuffer);
       if (buffer && buffer->IsValid())
@@ -163,6 +163,7 @@ void CRendererDRMPRIMEGLES::AddVideoPicture(const VideoPicture& picture, int ind
   buf.videoBuffer->Acquire();
 
   buf.m_srcPrimaries = static_cast<AVColorPrimaries>(picture.color_primaries);
+  buf.m_dstPrimaries = AVCOL_PRI_BT709;
   buf.m_srcColSpace = static_cast<AVColorSpace>(picture.color_space);
 
   if (buf.m_srcColSpace == AVCOL_SPC_UNSPECIFIED)
@@ -371,13 +372,16 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
   renderSystem->GUIShaderSetAlpha(shaderAlpha);
 
+  if (buf.m_srcPrimaries == AVCOL_PRI_BT2020 && m_videoLayerBridge->IsBT2020Enabled())
+    buf.m_dstPrimaries = buf.m_srcPrimaries;
+
   CConvertMatrix matrix;
   matrix.SetSourceColorSpace(buf.m_srcColSpace)
       .SetSourceBitDepth(buf.m_srcBits)
       .SetSourceLimitedRange(!buf.m_srcFullRange)
       .SetSourceTextureBitDepth(buf.texture->GetTextureBits())
       .SetSourceColorPrimaries(buf.m_srcPrimaries)
-      .SetDestinationColorPrimaries(AVCOL_PRI_BT709)
+      .SetDestinationColorPrimaries(buf.m_dstPrimaries)
       .SetDestinationContrast(m_videoSettings.m_Contrast * 0.02f)
       .SetDestinationBlack(m_videoSettings.m_Brightness * 0.01f - 0.5f)
       .SetDestinationLimitedRange(CServiceBroker::GetWinSystem()->UseLimitedColor());
@@ -386,7 +390,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
   CLog::Log(LOGDEBUG, LOGVIDEO,
             "CRendererDRMPRIMEGLES::{} - source primary: {} destination primary: {}", __FUNCTION__,
-            buf.m_srcPrimaries, AVCOL_PRI_BT709);
+            buf.m_srcPrimaries, buf.m_dstPrimaries);
   CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source colorspace: {}", __FUNCTION__,
             buf.m_srcColSpace);
   CLog::Log(LOGDEBUG, LOGVIDEO, "CRendererDRMPRIMEGLES::{} - source bits: {}", __FUNCTION__,
@@ -406,8 +410,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   renderSystem->GUIShaderSetYUVMatrix(yuv.ToRaw());
   renderSystem->GUIShaderSetEnableColorConversion(false);
 
-  //! @todo: depend on output colorspace
-  if (buf.m_srcPrimaries != AVCOL_PRI_BT709)
+  if (buf.m_srcPrimaries != buf.m_dstPrimaries)
   {
     Matrix3 primMat = matrix.GetPrimMat();
 
@@ -433,7 +436,9 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
 
   renderSystem->GUIShaderSetToneMappingMethod(VS_TONEMAPMETHOD_OFF);
   if (m_videoSettings.m_ToneMapMethod != 0 &&
-      (buf.m_hasLightMetadata || (buf.m_hasDisplayMetadata && buf.m_displayMetadata.has_luminance)))
+      (buf.m_hasLightMetadata ||
+       (buf.m_hasDisplayMetadata && buf.m_displayMetadata.has_luminance)) &&
+      !m_videoLayerBridge->IsHDREnabled())
   {
     float param = 0.7;
 
