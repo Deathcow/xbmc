@@ -77,6 +77,7 @@ private:
     std::unique_ptr<CDRMPRIMETexture> texture;
 
     AVColorPrimaries m_srcPrimaries;
+    AVColorPrimaries m_dstPrimaries;
     AVColorSpace m_srcColSpace;
 
     bool m_hasDisplayMetadata{false};
