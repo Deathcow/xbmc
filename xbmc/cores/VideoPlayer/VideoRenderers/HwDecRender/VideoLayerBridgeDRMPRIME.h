@@ -63,9 +63,14 @@ public:
   ~CVideoLayerBridgeDRMPRIME() override;
   void Disable() override;
 
+  void Callback() override;
+
   virtual void Configure(CVideoBufferDRMPRIME* buffer);
   virtual void SetVideoPlane(CVideoBufferDRMPRIME* buffer, const CRect& destRect);
   virtual void UpdateVideoPlane();
+
+  bool IsHDREnabled() const { return m_hdr_enabled; }
+  bool IsBT2020Enabled() const { return m_bt2020_enabled; }
 
 protected:
   std::shared_ptr<KODI::WINDOWING::GBM::CDRMAtomic> m_DRM;
@@ -81,4 +86,7 @@ private:
 
   uint32_t m_hdr_blob_id = 0;
   struct hdr_output_metadata m_hdr_metadata = {};
+
+  bool m_hdr_enabled{false};
+  bool m_bt2020_enabled{false};
 };

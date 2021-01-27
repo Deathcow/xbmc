@@ -15,6 +15,7 @@
 #include "settings/SettingsComponent.h"
 #include "settings/lib/Setting.h"
 #include "utils/log.h"
+#include "windowing/gbm/VideoLayerBridge.h"
 
 #include <errno.h>
 #include <string.h>
@@ -153,6 +154,9 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
     if (drmModeDestroyPropertyBlob(m_fd, blob_id) != 0)
       CLog::Log(LOGERROR, "CDRMAtomic::{} - failed to destroy property blob: {}", __FUNCTION__,
                 strerror(errno));
+
+    if (m_bridge)
+      m_bridge->Callback();
   }
 
   if (m_atomicRequestQueue.size() > 1)
@@ -342,3 +346,13 @@ void CDRMAtomic::CDRMAtomicRequest::DrmModeAtomicReqDeleter::operator()(drmModeA
 {
   drmModeAtomicFree(p);
 };
+
+void CDRMAtomic::RegisterModesetCallback(CVideoLayerBridge* bridge)
+{
+  m_bridge = bridge;
+}
+
+void CDRMAtomic::UnRegisterModesetCallback()
+{
+  m_bridge = nullptr;
+}
