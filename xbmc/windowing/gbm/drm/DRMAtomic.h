@@ -22,6 +22,7 @@ namespace WINDOWING
 namespace GBM
 {
 
+class CVideoLayerBridge;
 class CDRMAtomic : public CDRMUtils
 {
 public:
@@ -36,6 +37,9 @@ public:
 
   bool DisplayHardwareScalingEnabled();
 
+  void RegisterModesetCallback(CVideoLayerBridge* bridge);
+  void UnRegisterModesetCallback();
+
 private:
   void DrmAtomicCommit(int fb_id, int flags, bool rendered, bool videoLayer);
 
@@ -44,6 +48,7 @@ private:
   bool m_need_modeset;
   bool m_active = true;
 
+  CVideoLayerBridge* m_bridge{nullptr};
   class CDRMAtomicRequest
   {
   public:
