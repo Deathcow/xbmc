@@ -87,6 +87,13 @@ CBaseRenderer* CRendererDRMPRIME::Create(CVideoBuffer* buffer)
 
     buf->ReleaseDescriptor();
 
+    auto gui = drm->GetGuiPlane();
+    if (!gui)
+      return nullptr;
+
+    if (!gui->SupportsFormat(CDRMUtils::FourCCWithAlpha(gui->GetFormat())))
+      return nullptr;
+
     auto plane = drm->GetVideoPlane();
     if (!plane)
       return nullptr;
