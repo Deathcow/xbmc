@@ -21,12 +21,34 @@ using namespace DRMPRIME;
 CVideoLayerBridgeDRMPRIME::CVideoLayerBridgeDRMPRIME(std::shared_ptr<CDRMAtomic> drm)
   : m_DRM(std::move(drm))
 {
+  m_DRM->RegisterModesetCallback(this);
 }
 
 CVideoLayerBridgeDRMPRIME::~CVideoLayerBridgeDRMPRIME()
 {
   Release(m_prev_buffer);
   Release(m_buffer);
+
+  m_DRM->UnRegisterModesetCallback();
+}
+
+void CVideoLayerBridgeDRMPRIME::Callback()
+{
+  auto connector = m_DRM->GetConnector();
+
+  m_hdr_enabled = connector->GetProperty("HDR_OUTPUT_METADATA") != 0;
+
+  CLog::Log(LOGDEBUG, "CVideoLayerBridgeDRMPRIME::{} - HDR: {}", __FUNCTION__, m_hdr_enabled);
+
+  bool result;
+  uint64_t bt2020;
+  std::tie(result, bt2020) = connector->GetPropertyValue("Colorspace", "BT2020_RGB");
+  if (!result)
+    return;
+
+  m_bt2020_enabled = connector->GetProperty("Colorspace") == bt2020;
+
+  CLog::Log(LOGDEBUG, "CVideoLayerBridgeDRMPRIME::{} - BT2020: {}", __FUNCTION__, m_bt2020_enabled);
 }
 
 void CVideoLayerBridgeDRMPRIME::Disable()

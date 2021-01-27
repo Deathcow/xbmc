@@ -20,6 +20,8 @@ class CVideoLayerBridge
 public:
   virtual ~CVideoLayerBridge() = default;
   virtual void Disable() {};
+
+  virtual void Callback() = 0;
 };
 
 }
