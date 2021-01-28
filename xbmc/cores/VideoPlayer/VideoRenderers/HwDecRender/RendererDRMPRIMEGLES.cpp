@@ -352,7 +352,8 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
   matrix.SetColPrimaries(AVCOL_PRI_BT709, buf.m_srcPrimaries);
   matrix.SetColParams(buf.m_srcColSpace, buf.m_srcBits, !buf.m_srcFullRange,
                       buf.texture.GetTextureBits());
-  matrix.SetParams(1.0f, 0.0f, CServiceBroker::GetWinSystem()->UseLimitedColor());
+  matrix.SetParams(m_videoSettings.m_Contrast * 0.02f, m_videoSettings.m_Brightness * 0.01f - 0.5f,
+                   CServiceBroker::GetWinSystem()->UseLimitedColor());
 
   float yuv[4][4];
   matrix.GetYuvMat(yuv);
@@ -545,6 +546,8 @@ bool CRendererDRMPRIMEGLES::Supports(ERENDERFEATURE feature)
     case RENDERFEATURE_PIXEL_RATIO:
     case RENDERFEATURE_ROTATION:
     case RENDERFEATURE_TONEMAP:
+    case RENDERFEATURE_BRIGHTNESS:
+    case RENDERFEATURE_CONTRAST:
       return true;
     default:
       return false;
