@@ -683,7 +683,8 @@ bool CWindowDecorator::IsDecorationActive() const
 bool CWindowDecorator::StateHasWindowDecorations(IShellSurface::StateBitset state) const
 {
   // No decorations possible if subcompositor not available
-  return m_subcompositor && !state.test(IShellSurface::STATE_FULLSCREEN);
+  //return m_subcompositor && !state.test(IShellSurface::STATE_FULLSCREEN);
+  return false;
 }
 
 CSizeInt CWindowDecorator::CalculateMainSurfaceSize(CSizeInt size, IShellSurface::StateBitset state) const
