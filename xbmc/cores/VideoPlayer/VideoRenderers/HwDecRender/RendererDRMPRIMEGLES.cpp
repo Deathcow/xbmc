@@ -371,6 +371,7 @@ void CRendererDRMPRIMEGLES::RenderUpdate(
     layers = 3;
   }
 
+  glActiveTexture(GL_TEXTURE0);
   if (layers == 1)
     renderSystem->EnableGUIShader(SM_TEXTURE_RGBA_OES);
   else
